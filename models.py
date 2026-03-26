@@ -49,6 +49,8 @@ class PerceptronModel(object):
         finished = False
         while not finished:
             allCorrect = True
+            #Get one data entry at a time, and for each get the prediction.
+            #If prediction is wrong, have to go again, and also update the weights
             for x, y in data.iterate_once(1):
                 if self.get_prediction(x) != nn.as_scalar(y):
                     allCorrect = False
@@ -67,9 +69,20 @@ class RegressionModel(object):
     def __init__(self):
         # Initialize your model parameters here
         "*** YOUR CODE HERE ***"
-        hiddenLayerSize = 50
+        hiddenLayerSize = 70
 
-        self.
+        #first layer, (1) - > (hiddenLayerSize)
+        self.W1 = nn.Parameter(1,hiddenLayerSize)
+        self.b1 = nn.Parameter(1,hiddenLayerSize)
+
+        #second layer, (hiddenLayerSize) - > (hiddenLayerSize)
+        self.W2 = nn.Parameter(hiddenLayerSize,hiddenLayerSize)
+        self.b2 = nn.Parameter(1,hiddenLayerSize)
+
+        #output, (hiddenLayerSize) - > (1)
+        self.W3 = nn.Parameter(hiddenLayerSize,1)
+        self.b3 = nn.Parameter(1,1)
+
 
     def run(self, x):
         """
@@ -81,6 +94,10 @@ class RegressionModel(object):
             A node with shape (batch_size x 1) containing predicted y-values
         """
         "*** YOUR CODE HERE ***"
+        first = nn.ReLU(nn.AddBias(self.b1,nn.Linear(x,self.W1)))
+        second = nn.ReLU(nn.AddBias(self.b2,nn.Linear(first,self.W2)))
+        return nn.AddBias(self.b3,nn.Linear(second,self.W3))
+
 
     def get_loss(self, x, y):
         """
@@ -93,12 +110,34 @@ class RegressionModel(object):
         Returns: a loss node
         """
         "*** YOUR CODE HERE ***"
+        return nn.SquareLoss(self.run(x),y)
 
     def train_model(self, data):
         """
         Trains the model.
         """
         "*** YOUR CODE HERE ***"
+        learnRate = -0.007
+        batch = 20
+
+        finished = False
+        while not finished:
+            for x, y in data.iterate_once(batch):
+                loss = self.get_loss(x,y)
+                gW1, gb1, gW2, gb2, gW3, gb3 = nn.gradients([self.W1, self.b1,self.W2, self.b2,  self.W3, self.b3],loss)
+
+                self.W1.update(learnRate,gW1)
+                self.W2.update(learnRate,gW2) 
+                self.W3.update(learnRate,gW3)
+                self.b1.update(learnRate,gb1)
+                self.b2.update(learnRate,gb2)
+                self.b3.update(learnRate,gb3)
+            for x,y in data.iterate_once(200):
+                modelLoss = nn.as_scalar(self.get_loss(x,y))
+            if modelLoss <0.019:
+                finished = True
+            
+
 
 class DigitClassificationModel(object):
     """
