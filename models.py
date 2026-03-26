@@ -94,6 +94,7 @@ class RegressionModel(object):
             A node with shape (batch_size x 1) containing predicted y-values
         """
         "*** YOUR CODE HERE ***"
+        # returning: relu( relu( x*W1 + b1 )*W2 + b2 )*W3 + b3
         first = nn.ReLU(nn.AddBias(self.b1,nn.Linear(x,self.W1)))
         second = nn.ReLU(nn.AddBias(self.b2,nn.Linear(first,self.W2)))
         return nn.AddBias(self.b3,nn.Linear(second,self.W3))
@@ -117,6 +118,7 @@ class RegressionModel(object):
         Trains the model.
         """
         "*** YOUR CODE HERE ***"
+        #sets learnRate as negative as i try to minimize the loss function
         learnRate = -0.007
         batch = 20
 
@@ -124,14 +126,16 @@ class RegressionModel(object):
         while not finished:
             for x, y in data.iterate_once(batch):
                 loss = self.get_loss(x,y)
+                #gets gradient per each variable
                 gW1, gb1, gW2, gb2, gW3, gb3 = nn.gradients([self.W1, self.b1,self.W2, self.b2,  self.W3, self.b3],loss)
-
+                #updates each in the opposite direction to the gradient
                 self.W1.update(learnRate,gW1)
                 self.W2.update(learnRate,gW2) 
                 self.W3.update(learnRate,gW3)
                 self.b1.update(learnRate,gb1)
                 self.b2.update(learnRate,gb2)
                 self.b3.update(learnRate,gb3)
+            #once loss for all model is below 0.019 (for safety), stops
             for x,y in data.iterate_once(200):
                 modelLoss = nn.as_scalar(self.get_loss(x,y))
             if modelLoss <0.019:
@@ -156,6 +160,24 @@ class DigitClassificationModel(object):
     def __init__(self):
         # Initialize your model parameters here
         "*** YOUR CODE HERE ***"
+        
+        hiddenLayerSize = 100
+
+        #first layer, (784) - > (hiddenLayerSize)
+        self.W1 = nn.Parameter(784,hiddenLayerSize)
+        self.b1 = nn.Parameter(1,hiddenLayerSize)
+
+        #second layer, (hiddenLayerSize) - > (hiddenLayerSize)
+        self.W2 = nn.Parameter(hiddenLayerSize,hiddenLayerSize)
+        self.b2 = nn.Parameter(1,hiddenLayerSize)
+
+        #third layer, (hiddenLayerSize) - > (hiddenLayerSize)
+        self.W4 = nn.Parameter(hiddenLayerSize,hiddenLayerSize)
+        self.b4 = nn.Parameter(1,hiddenLayerSize)
+
+        #output, (hiddenLayerSize) - > (10)
+        self.W3 = nn.Parameter(hiddenLayerSize,10)
+        self.b3 = nn.Parameter(1,10)
 
     def run(self, x):
         """
@@ -172,6 +194,11 @@ class DigitClassificationModel(object):
                 (also called logits)
         """
         "*** YOUR CODE HERE ***"
+        #3 hidden layers of ReLU
+        first = nn.ReLU(nn.AddBias(self.b1,nn.Linear(x,self.W1)))
+        second = nn.ReLU(nn.AddBias(self.b2,nn.Linear(first,self.W2)))
+        third = nn.ReLU(nn.AddBias(self.b4,nn.Linear(second,self.W4)))
+        return nn.AddBias(self.b3,nn.Linear(third,self.W3))
 
     def get_loss(self, x, y):
         """
@@ -187,10 +214,35 @@ class DigitClassificationModel(object):
         Returns: a loss node
         """
         "*** YOUR CODE HERE ***"
+        return nn.SoftmaxLoss(self.run(x),y)
 
     def train_model(self, data):
         """
         Trains the model.
         """
         "*** YOUR CODE HERE ***"
+        #sets learnRate as negative as i try to minimize the loss function
+        learnRate = -0.0065
+        batch = 50
+
+        finished = False
+        while not finished:
+            for x, y in data.iterate_once(batch):
+                loss = self.get_loss(x,y)
+                #gets gradient per each variable
+                gW1, gb1, gW2, gb2, gW3, gb3, gW4, gb4 = nn.gradients([self.W1, self.b1 ,self.W2, self.b2, self.W3, self.b3, self.W4, self.b4],loss)
+                
+                #updates each in the opposite direction to the gradient
+                self.W1.update(learnRate,gW1)
+                self.W2.update(learnRate,gW2)  
+                self.W3.update(learnRate,gW3)
+                self.W4.update(learnRate,gW4)
+                self.b1.update(learnRate,gb1)
+                self.b2.update(learnRate,gb2)
+                self.b3.update(learnRate,gb3)
+                self.b4.update(learnRate,gb4)
+
+            #once accuracy is above 0.975, stops
+            if data.get_validation_accuracy() > 0.975:
+                finished = True
 
